@@ -9,28 +9,42 @@ import json
 HEADER = 64
 FORMAT = 'utf-8'
 
-SERVER, PORT = "127.0.0.1", 5050
+SERVER, PORT = "127.0.0.1", 12345
 #SERVER = socket.gethostbyname(socket.gethostname())
 DISCONNECT_MESSAGE = "!Disconnect"
 
+list_of_clients = []
+list_of_nicknames = []
+groups = []
 
-def handle_client(conn, addr):  
+
+def broadcastToGroup():
+    return 0
+
+def broadcast(msg):
+    for client in list_of_clients:
+        client.send(msg)
+
+def handle_client(client, addr):  
     print(f"[NEW CONNECTION] {addr} connected.")
 
     connected = True
     while connected:
-        msg_length = conn.recv(HEADER).decode(FORMAT)
+        msg_length = client.recv(HEADER).decode(FORMAT)
         if msg_length:
             msg_length = int(msg_length)
-            msg = conn.recv(msg_length).decode(FORMAT)
+            msg = client.recv(msg_length).decode(FORMAT)
             if msg == DISCONNECT_MESSAGE:
                 connected = False
                 
             print(f"[{addr}] {msg}")
-            conn.send("Msg received".encode(FORMAT))
+            client.send("Msg received".encode(FORMAT))
 
 
-    conn.close()
+    index = list_of_clients.index(client)
+    list_of_clients.remove(client)
+    print("asdasd", list_of_clients)
+    client.close()
 
 
 
@@ -44,8 +58,15 @@ def main():
     print(f"[LISTENING] Server ist listening on {SERVER}:{PORT}")
 
     while True:
-        conn, addr = server.accept()
-        thread = threading.Thread(target=handle_client, args=(conn, addr))
+        client, addr = server.accept()
+
+
+        # Request And Store Nickname
+        client.send('setNickname'.encode(FORMAT))
+        nickname = client.recv(1024).decode(FORMAT)
+
+        list_of_clients.append(client)
+        thread = threading.Thread(target=handle_client, args=(client, addr))
         thread.start()
         print(f"[ACTIVE CONNECTIONS] {threading.activeCount() - 1}")
 
